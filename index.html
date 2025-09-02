@@ -1,17 +1,193 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#000000" />
-  <title>Telegram Mini App</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vision Glasses NFTs — LuminaVerse</title>
+  <meta name="description" content="Unlock Vision Glasses NFTs with BTC, ETH, or BNB via Telegram.">
+  <link rel="preconnect" href="https://telegram.org">
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --card:#121a2b;
+      --text:#eef3ff;
+      --muted:#9bb1ff;
+      --accent:#8ab4ff;
+      --ok:#37d67a;
+      --warn:#ffcc00;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+      background: radial-gradient(1200px 600px at 20% 0%, #132244, transparent 60%), var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:24px;
+    }
+    .wrap{width:100%; max-width:720px}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      backdrop-filter: blur(8px);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:24px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    h1{
+      margin:0 0 6px;
+      font-size:clamp(22px, 4vw, 32px);
+      letter-spacing: .2px;
+    }
+    .tag{
+      display:inline-block;
+      font-size:12px;
+      padding:4px 10px;
+      border:1px solid rgba(255,255,255,.15);
+      border-radius:999px;
+      margin:8px 8px 16px 0;
+      color:var(--muted);
+    }
+    p{line-height:1.6; color:#d9e2ff; margin:0 0 16px}
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      margin-top:18px;
+    }
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center;
+      width:100%;
+      border:1px solid rgba(255,255,255,.12);
+      background:#111828;
+      color:var(--text);
+      padding:14px 16px;
+      border-radius:12px;
+      text-decoration:none;
+      font-weight:600;
+      transition: transform .06s ease, border-color .2s ease;
+      cursor:pointer;
+      user-select:none;
+    }
+    .btn:hover{ transform: translateY(-1px); border-color: rgba(255,255,255,.25); }
+    .btn:active{ transform: translateY(0); }
+    .btn.primary{ background: linear-gradient(180deg, #213a6b, #162746); border-color: rgba(138,180,255,.6); }
+    .hint{ font-size:12px; color:#a9b8ff; margin-top:10px }
+    .row{ display:flex; gap:12px; flex-wrap:wrap; }
+    .row .btn{ flex:1 1 240px }
+    .logos{
+      display:flex; gap:8px; margin:10px 0 0;
+      opacity:.9; font-size:12px; color:#b7c6ff;
+    }
+    .logos span{ border:1px solid rgba(255,255,255,.1); padding:6px 10px; border-radius:999px;}
+    .footer{ margin-top:18px; font-size:12px; color:#93a5ff; opacity:.9 }
+    .small{ font-size:12px; color:#b8c6ff }
+    .divider{ height:1px; background: rgba(255,255,255,.08); margin:16px 0 }
+    .preview{
+      margin:12px 0 18px;
+      padding:12px;
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:12px;
+      color:#cfe0ff;
+      background: rgba(255,255,255,.03);
+    }
+    @media (max-width:460px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-
 <body>
-  <noscript>You need to enable JavaScript to run this app.</noscript>
-  <div id="app"></div>
-  <script src="/src/main.ts" type="module"></script>
-</body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Vision Glasses NFTs</h1>
+      <div class="tag">LuminaVerse • Mini App</div>
+      <p class="small">
+        Unlock a new layer of digital identity with this one‑of‑a‑kind NFT, combining AI‑powered techwear and Web3 symbolism.
+        BTC • ETH • BNB logos are subtly embedded in the right lens — symbolizing clarity, speed, and financial innovation.
+      </p>
 
-</html>
+      <div class="preview">
+        <strong>Preview:</strong> Vision Glasses • Limited Edition · Digital Ownership Badge
+        <div class="logos"><span>BTC</span><span>ETH</span><span>BNB</span></div>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="launchApp">🚀 Launch NFT App</button>
+        <button class="btn" id="shareLink">🔗 Share</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <p><strong>Pay with your wallet:</strong></p>
+      <div class="grid">
+        <button class="btn" data-link="https://web3.okx.com/ul/your-btc-link">💰 BTC</button>
+        <button class="btn" data-link="https://web3.okx.com/ul/your-eth-link">💎 ETH</button>
+        <button class="btn" data-link="https://web3.okx.com/ul/your-bnb-link">🔥 BNB</button>
+      </div>
+
+      <p class="hint">Tip: In Telegram Mini App, links open inside the app. Outside Telegram, they will open in a new tab.</p>
+
+      <div class="footer">
+        © LuminaVerse · <a href="https://nft-mini-app-sage.vercel.app" target="_blank" rel="noopener noreferrer" style="color:var(--accent); text-underline-offset:2px;">nft-mini-app-sage.vercel.app</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Telegram Web App SDK (safe to load; enables in-app features) -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script>
+    (function(){
+      const NFT_APP_URL = "https://nft-mini-app-sage.vercel.app";
+
+      // Helpers
+      const isTelegram = typeof window.Telegram !== "undefined" && window.Telegram.WebApp;
+      function openLink(url){
+        if(isTelegram){
+          // open inside Telegram WebApp
+          window.Telegram.WebApp.openLink(url);
+        } else {
+          // fallback: open in new tab
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+      }
+
+      // Launch button
+      document.getElementById("launchApp").addEventListener("click", function(){
+        openLink(NFT_APP_URL);
+      });
+
+      // Share
+      document.getElementById("shareLink").addEventListener("click", function(){
+        const url = NFT_APP_URL;
+        if (navigator.share){
+          navigator.share({ title: "Vision Glasses NFTs", text: "Mint your Vision Glasses NFT", url });
+        } else {
+          openLink(url);
+        }
+      });
+
+      // Payment buttons
+      document.querySelectorAll(".grid .btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const link = btn.getAttribute("data-link");
+          if(link){ openLink(link); }
+        });
+      });
+
+      // Telegram UI polish
+      if(isTelegram){
+        const tg = window.Telegram.WebApp;
+        try{
+          tg.ready();
+          tg.expand(); // use more viewport
+          tg.MainButton.setText("Launch NFT App");
+          tg.MainButton.onClick(() => openLink(NFT_APP_URL));
+          tg.MainButton.show();
+        }catch(e){ /* noop */ }
+      }
+    })();
+  </script>
+</body>
