@@ -1,371 +1,272 @@
-# Create a full project bundle (frontend + contract + metadata + README) and zip it for user download.
-import os, zipfile, shutil, json, textwrap
+# Build a "file app" bundle with a dark, glassy panel like the screenshot.
+# It includes both: (1) a tap-to-earn glasses game and (2) a mint/pay panel.
+import os, zipfile, shutil, textwrap
 
-project_dir = "/mnt/data/vision-glasses-complete"
-if os.path.exists(project_dir):
-    shutil.rmtree(project_dir)
-os.makedirs(project_dir, exist_ok=True)
+root = "/mnt/data/vision-glasses-fileapp"
+if os.path.exists(root):
+    shutil.rmtree(root)
+os.makedirs(root, exist_ok=True)
 
-# index.html with both Telegram + WalletConnect + ethers + contract option
 index_html = """<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Vision Glasses — Mint (ETH)</title>
-<link rel="icon" href="data:,"/>
-<style>
-  :root{--bg:#071026;--card:#0f1724;--accent:#00e6e6;--muted:#9fb4d6;--success:#16a34a}
-  body{margin:0;font-family:Inter,system-ui,Arial;background:linear-gradient(180deg,#071026 0%, #04060a 100%);color:#e6f0ff;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:28px;}
-  .card{width:100%;max-width:900px;background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));border-radius:14px;padding:22px;border:1px solid rgba(255,255,255,.04);box-shadow:0 18px 50px rgba(2,6,23,.65)}
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px}
-  h1{margin:0;font-size:20px;color:var(--accent)}
-  .sub{color:var(--muted);font-size:13px}
-  .grid{display:grid;grid-template-columns:320px 1fr;gap:18px;margin-top:18px}
-  .nft-preview{background:linear-gradient(180deg, rgba(255,255,255,.01), rgba(255,255,255,.00));padding:12px;border-radius:10px;border:1px dashed rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;gap:10px}
-  .nft-preview img{max-width:100%;border-radius:8px;box-shadow:0 10px 30px rgba(2,10,20,.6)}
-  .meta{font-size:16px;color:#e6f0ff}
-  .price{font-weight:700;color:var(--accent);margin-top:6px}
-  .controls{display:flex;flex-direction:column;gap:12px}
-  .btn{padding:12px 14px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
-  .btn.connect{background:#2b3a55;color:#fff}
-  .btn.mint{background:linear-gradient(90deg,#00c2b3,#00e6e6);color:#001219}
-  .row{display:flex;gap:10px;align-items:center}
-  .small{font-size:13px;color:var(--muted)}
-  .walletBox{padding:12px;border-radius:10px;background:#091022;border:1px solid rgba(255,255,255,.03)}
-  .success{color:var(--success);font-weight:700}
-  .footer{margin-top:14px;font-size:13px;color:var(--muted)}
-  @media (max-width:820px){ .grid{grid-template-columns:1fr;} }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vision Glasses — Mini App</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="card" role="main">
-    <header>
-      <div>
-        <h1>Vision Glasses</h1>
-        <div class="sub">Limited Edition • LuminaVerse — ETH collection</div>
-      </div>
-      <div style="text-align:right">
-        <div id="tgUser" class="small">Not opened in Telegram</div>
-        <div id="walletShort" class="small" style="margin-top:6px">Wallet: —</div>
-      </div>
-    </header>
+  <div class="backdrop"></div>
+  <main class="wrap">
+    <section class="card">
+      <header class="card__header">
+        <div class="brand">
+          <h1>Vision Glasses NFT's</h1>
+          <p class="muted">Private mint • Vision Glasses • Digital Ownership Badge</p>
+        </div>
+        <nav class="tabs">
+          <button class="tab active" data-tab="mint">Mint</button>
+          <button class="tab" data-tab="tap">Tap Game</button>
+        </nav>
+      </header>
 
-    <div class="grid" style="align-items:start">
-      <div class="nft-preview">
-        <img id="nftImage" src="glasses.png" alt="Vision Glasses NFT preview" />
-        <div class="meta">Vision Glasses — Limited Drop</div>
-        <div class="price">$50 (pay in ETH)</div>
-        <div class="small">Payment address / contract:</div>
-        <div class="walletBox" id="receiverBox">0xc15a5316B75ab200E0c24688f85ef9612D70bBd8</div>
-      </div>
-
-      <div class="controls">
-        <div class="walletBox">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <div>
-              <div class="small">Connected wallet</div>
-              <div id="connectedAddr" style="font-weight:700">—</div>
+      <!-- Mint panel -->
+      <div class="panel active" id="panel-mint">
+        <div class="mint-grid">
+          <div class="media">
+            <img src="glasses.png" alt="Vision Glasses" class="nft" />
+          </div>
+          <div class="details">
+            <div class="field">
+              <label>Choose network</label>
+              <div class="choices">
+                <button class="chip chip--active">ETH</button>
+                <button class="chip" disabled title="Coming soon">BTC</button>
+                <button class="chip" disabled title="Coming soon">BNB</button>
+              </div>
             </div>
-            <div>
-              <button class="btn connect" id="btnConnect">Connect Wallet</button>
+
+            <div class="field">
+              <label>Pay with your wallet</label>
+              <div class="wallet-row">
+                <button id="connect" class="btn subtle">Connect Wallet</button>
+                <span id="short">Not connected</span>
+              </div>
+              <div class="hint">Price: <strong>$50</strong> (~0.03 ETH). Funds go to:</div>
+              <div class="addr" id="address">0xc15a5316B75ab200E0c24688f85ef9612D70bBd8</div>
+              <div id="status" class="status muted">Status: idle</div>
+              <div class="actions">
+                <button id="pay" class="btn primary">Mint / Pay</button>
+                <a class="btn ghost" href="https://etherscan.io/address/0xc15a5316B75ab200E0c24688f85ef9612D70bBd8" target="_blank">View on Etherscan</a>
+              </div>
             </div>
           </div>
-
-          <div style="margin-top:10px" id="networkInfo" class="small">Network: —</div>
-          <div style="margin-top:8px" class="small">
-            <label><input type="checkbox" id="useContract" /> Use contract mint (if configured)</label>
-          </div>
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:center">
-          <button class="btn mint" id="btnMint">Mint / Pay $50</button>
-          <div id="mintStatus" class="small">Status: waiting</div>
-        </div>
-
-        <div class="small">Notes: If you provide a deployed contract address and ABI in <code>config.json</code>, the page will call <code>mintNFT(tokenURI)</code>. Otherwise it sends ETH directly to the receiver address.</div>
-
-        <div class="footer">
-          Future: add BTC & BNB collections — they will appear here. Opened inside Telegram? the app will show your Telegram name.
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Libraries -->
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+      <!-- Tap-to-earn panel -->
+      <div class="panel" id="panel-tap">
+        <div class="tap-wrap">
+          <p class="muted">Tap the glasses to earn points. Your best score is saved on this device.</p>
+          <div class="tap-stage">
+            <img id="tap-glasses" src="glasses.png" alt="Tap Glasses" />
+            <div id="tap-pop" class="pop hidden">+1</div>
+          </div>
+          <div class="scores">
+            <div>Score: <span id="score">0</span></div>
+            <div>Best: <span id="best">0</span></div>
+          </div>
+          <div class="actions">
+            <button id="reset" class="btn ghost">Reset Score</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
 
-  <script>
-  (async function(){
-    // ---- CONFIG (edit config.json instead of code) ----
-    // RECEIVER_ADDRESS is used when no contract is provided.
-    const RECEIVER_ADDRESS = "0xc15a5316B75ab200E0c24688f85ef9612D70bBd8";
-    const ETH_AMOUNT = "0.03"; // ~ $50 (adjust as needed)
-    // If you deploy the VisionGlassesNFT contract, set CONTRACT_ADDRESS and TOKEN_URI in config.json
-    // CONTRACT_ABI will be read from config.json if present.
-    // --------------------------------------------------
-
-    // Try to load config.json (optional)
-    let config = {};
-    try {
-      const res = await fetch('config.json');
-      if (res.ok) config = await res.json();
-    } catch(e){ /* no config */ }
-
-    // Merge config values (if provided)
-    const CONTRACT_ADDRESS = config.contractAddress || null;
-    const CONTRACT_ABI = config.contractAbi || null;
-    const TOKEN_URI = config.tokenURI || null; // e.g., ipfs://Qm...
-
-    // DOM elements
-    const btnConnect = document.getElementById("btnConnect");
-    const btnMint = document.getElementById("btnMint");
-    const connectedAddrEl = document.getElementById("connectedAddr");
-    const walletShort = document.getElementById("walletShort");
-    const mintStatus = document.getElementById("mintStatus");
-    const networkInfo = document.getElementById("networkInfo");
-    const tgUser = document.getElementById("tgUser");
-    const receiverBox = document.getElementById("receiverBox");
-    const useContractCheckbox = document.getElementById("useContract");
-
-    // show receiver or contract
-    if (CONTRACT_ADDRESS) receiverBox.textContent = CONTRACT_ADDRESS;
-    else receiverBox.textContent = RECEIVER_ADDRESS;
-
-    // Telegram WebApp display (if opened in Telegram)
-    try {
-      if (window.Telegram && window.Telegram.WebApp){
-        const tg = window.Telegram.WebApp;
-        const user = tg.initDataUnsafe && tg.initDataUnsafe.user;
-        if (user) tgUser.textContent = (user.first_name || "") + (user.last_name ? " " + user.last_name : "") + " — Telegram";
-        else tgUser.textContent = "Telegram WebApp (no user)";
-        try { tg.ready(); tg.expand(); } catch(e){}
-      }
-    } catch(e){}
-
-    // Wallet state
-    let provider = null;
-    let signer = null;
-    let connectedAddress = null;
-    let rawProvider = null;
-
-    function short(a){ return a ? a.slice(0,6) + "…" + a.slice(-4) : "—"; }
-
-    async function connectWallet(){
-      mintStatus.textContent = "Status: connecting...";
-      if (signer) return true;
-      // MetaMask
-      if (window.ethereum){
-        try {
-          rawProvider = window.ethereum;
-          await rawProvider.request({ method: 'eth_requestAccounts' });
-          provider = new ethers.providers.Web3Provider(rawProvider);
-          signer = provider.getSigner();
-          connectedAddress = await signer.getAddress();
-          afterConnect();
-          return true;
-        } catch(err){
-          console.error("MetaMask failed", err);
-        }
-      }
-      // WalletConnect fallback
-      try {
-        const WalletConnectProvider = window.WalletConnectProvider.default;
-        const wcProvider = new WalletConnectProvider({
-          rpc: {1: "https://cloudflare-eth.com"},
-          chainId: 1,
-          qrcode: true
-        });
-        await wcProvider.enable();
-        rawProvider = wcProvider;
-        provider = new ethers.providers.Web3Provider(wcProvider);
-        signer = provider.getSigner();
-        connectedAddress = await signer.getAddress();
-        afterConnect();
-        return true;
-      } catch(err){
-        console.error("WalletConnect failed", err);
-        mintStatus.textContent = "Status: connection failed";
-        return false;
-      }
-    }
-
-    function afterConnect(){
-      connectedAddrEl.textContent = short(connectedAddress);
-      walletShort.textContent = "Wallet: " + short(connectedAddress);
-      mintStatus.textContent = "Status: connected";
-      provider.getNetwork().then(n => networkInfo.textContent = "Network: " + n.name + " (chainId " + n.chainId + ")");
-      btnConnect.textContent = "Connected";
-      btnConnect.disabled = true;
-    }
-
-    async function sendPaymentDirect(){
-      if (!signer) { mintStatus.textContent = "Status: wallet not connected"; return; }
-      try {
-        mintStatus.textContent = "Status: creating tx";
-        const value = ethers.utils.parseEther(ETH_AMOUNT);
-        const tx = await signer.sendTransaction({ to: RECEIVER_ADDRESS, value });
-        mintStatus.innerHTML = `Status: tx sent — <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
-        const receipt = await tx.wait();
-        if (receipt && receipt.status === 1){
-          mintStatus.innerHTML = `✅ Transaction confirmed — <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
-        } else mintStatus.textContent = "Transaction failed";
-      } catch(err){
-        console.error(err);
-        mintStatus.textContent = "Error: " + (err.message ? err.message.slice(0,200) : "Tx failed");
-      }
-    }
-
-    async function callContractMint(){
-      if (!signer) { mintStatus.textContent = "Status: wallet not connected"; return; }
-      if (!CONTRACT_ADDRESS || !CONTRACT_ABI) { mintStatus.textContent = "Contract not configured in config.json"; return; }
-      try {
-        mintStatus.textContent = "Status: calling contract mint";
-        const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-        // If your contract expects payment via msg.value, adjust here. We're calling mintNFT(tokenURI) with value if configured.
-        if (TOKEN_URI){
-          const tx = await contract.mintNFT(TOKEN_URI, { value: ethers.utils.parseEther(ETH_AMOUNT) });
-          mintStatus.innerHTML = `Status: tx sent — <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
-          const receipt = await tx.wait();
-          if (receipt && receipt.status === 1){
-            mintStatus.innerHTML = `✅ Mint confirmed — <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
-          } else mintStatus.textContent = "Mint tx failed";
-        } else {
-          // call mintNFT without tokenURI (if your contract mints automatically)
-          const tx = await contract.mintNFT({ value: ethers.utils.parseEther(ETH_AMOUNT) });
-          mintStatus.innerHTML = `Status: tx sent — <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
-          const receipt = await tx.wait();
-          if (receipt && receipt.status === 1){
-            mintStatus.innerHTML = `✅ Mint confirmed — <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a>`;
-          } else mintStatus.textContent = "Mint tx failed";
-        }
-      } catch(err){
-        console.error(err);
-        mintStatus.textContent = "Error: " + (err.message ? err.message.slice(0,200) : "Contract call failed");
-      }
-    }
-
-    // Button actions
-    btnConnect.addEventListener("click", connectWallet);
-    btnMint.addEventListener("click", async ()=>{
-      btnMint.disabled = true;
-      btnMint.textContent = "Processing...";
-      await connectWallet();
-      // decide: use contract or direct transfer
-      if (useContractCheckbox.checked && CONTRACT_ADDRESS){
-        await callContractMint();
-      } else {
-        await sendPaymentDirect();
-      }
-      btnMint.disabled = false;
-      btnMint.textContent = "Mint / Pay $50";
-    });
-
-  })();
-  </script>
+  <!-- Minimal scripts (no framework needed) -->
+  <script src="script.js"></script>
 </body>
 </html>
 """
 
-# VisionGlasses smart contract
-solidity = """// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-
-contract VisionGlassesNFT is ERC721URIStorage, Ownable {
-    uint256 public tokenCounter;
-    uint256 public constant PRICE = 0.02 ether; // ~ $50
-
-    constructor() ERC721("VisionGlassesNFT", "VGNFT") {
-        tokenCounter = 0;
-    }
-
-    function mintNFT(string memory tokenURI) public payable returns (uint256) {
-        require(msg.value >= PRICE, "Not enough ETH sent, price is 0.02 ETH");
-
-        uint256 newItemId = tokenCounter;
-        _safeMint(msg.sender, newItemId);
-        _setTokenURI(newItemId, tokenURI);
-
-        tokenCounter += 1;
-        return newItemId;
-    }
-
-    function withdraw() public onlyOwner {
-        payable(owner()).transfer(address(this).balance);
-    }
+style_css = """/* --- Base --- */
+*{box-sizing:border-box}
+:root{
+  --bg:#030711;
+  --panel:#0b1222;
+  --panel-2:#0d1a33;
+  --text:#e6eefc;
+  --muted:#9fb4d6;
+  --accent:#5de1e6;
+  --accent-2:#00bcd4;
+  --ring:rgba(93,225,230,.35)
 }
-"""
+html,body{height:100%}
+body{margin:0;background:radial-gradient(1200px 600px at 70% -10%, #0b1a3d 0%, transparent 60%),linear-gradient(180deg,#050914 0%,#030711 100%);color:var(--text);font-family:Inter,system-ui,Arial,sans-serif;display:grid;place-items:center}
 
-# config.json template (optional)
-config_json = {
-    "contractAddress": "",
-    "contractAbi": [],
-    "tokenURI": ""
-}
+/* --- Backdrop glow --- */
+.backdrop{position:fixed;inset:0;pointer-events:none;background:radial-gradient(800px 400px at 20% 0%,rgba(0,188,212,.12),transparent 60%),radial-gradient(800px 400px at 90% 10%,rgba(93,225,230,.1),transparent 60%)}
 
-# metadata template
-metadata = {
-  "name": "Vision Glasses NFT",
-  "description": "Vision Glasses — LuminaVerse collection. BTC, ETH, BNB logos embedded in lens.",
-  "image": "ipfs://YOUR_IMAGE_HASH",
-  "attributes": [
-    {"trait_type":"Edition","value":"Limited"},
-    {"trait_type":"Style","value":"Techwear"}
-  ]
-}
+/* --- Layout --- */
+.wrap{width:100%;padding:24px}
+.card{max-width:860px;margin:0 auto;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.04)}
 
-# README
-readme = textwrap.dedent("""\
-    Vision Glasses — Complete package
-    --------------------------------
-    Files:
-    - index.html        -> Frontend (Telegram + WalletConnect + ethers.js). Edit config.json to enable contract minting.
-    - glasses.png       -> Placeholder for your NFT image (replace with your real image).
-    - VisionGlassesNFT.sol -> ERC-721 contract (OpenZeppelin) – deploy via Remix or Hardhat.
-    - config.json       -> Optional: place contractAddress, contractAbi (array), tokenURI (ipfs://...) to enable contract minting.
-    - metadata.json     -> Template for your token metadata (upload to IPFS and set tokenURI).
-    
-    Quick deploy:
-    1. Replace glasses.png with your image file.
-    2. (Optional) Upload metadata.json and image to IPFS (Pinata, nft.storage) and set tokenURI in config.json.
-    3. Deploy VisionGlassesNFT.sol (Remix + MetaMask). Copy contract address and ABI into config.json.
-    4. If you configure contract in config.json, open the site, toggle 'Use contract mint', connect wallet, and click Mint.
-    5. Without contract, site will send ETH directly to your RECEIVER address (configured in index.html).
-    
-    Deploy to Vercel:
-    - Create a GitHub repo or drag-and-drop the folder into Vercel deploy (it's a static site).
-    """)
+/* --- Header --- */
+.card__header{display:flex;align-items:flex-end;justify-content:space-between;padding:20px 22px;border-bottom:1px solid rgba(255,255,255,.06)}
+.brand h1{margin:0;font-size:18px;letter-spacing:.2px;color:var(--text)}
+.muted{color:var(--muted);font-size:13px}
+.tabs{display:flex;gap:8px}
+.tab{appearance:none;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+.tab.active{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
 
-# write files
-with open(os.path.join(project_dir, "index.html"), "w", encoding="utf-8") as f:
+/* --- Panels --- */
+.panel{display:none;padding:22px}
+.panel.active{display:block}
+
+/* --- Mint grid --- */
+.mint-grid{display:grid;grid-template-columns:320px 1fr;gap:18px}
+.media{display:flex;justify-content:center;align-items:center;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px dashed rgba(255,255,255,.08);border-radius:14px;padding:12px}
+.nft{max-width:100%;border-radius:10px;box-shadow:0 20px 60px rgba(2,10,20,.6)}
+.details{display:flex;flex-direction:column;gap:16px}
+.field label{display:block;margin-bottom:6px;color:var(--muted);font-size:12px}
+.choices{display:flex;gap:8px}
+.chip{padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:var(--text);cursor:pointer}
+.chip--active{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.wallet-row{display:flex;gap:10px;align-items:center}
+.addr{margin-top:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--panel);border:1px solid rgba(255,255,255,.07);padding:10px;border-radius:10px;word-break:break-all}
+.status{margin-top:6px}
+.actions{display:flex;gap:10px;margin-top:10px}
+
+/* --- Buttons --- */
+.btn{appearance:none;border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer}
+.btn.primary{background:linear-gradient(90deg,var(--accent-2),var(--accent));color:#001219}
+.btn.subtle{background:#18243e;color:var(--text);border:1px solid rgba(255,255,255,.08)}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text)}
+
+/* --- Tap game --- */
+.tap-wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+.tap-stage{position:relative;display:grid;place-items:center;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));border:1px dashed rgba(255,255,255,.08);border-radius:14px;padding:18px;min-height:320px;width:100%;max-width:420px}
+.tap-stage img{width:260px;transition:transform .1s ease}
+.tap-stage img:active{transform:scale(1.08)}
+.pop{position:absolute;top:50%;transform:translate(-50%,-50%);left:50%;font-weight:800;font-size:22px;color:var(--accent);text-shadow:0 2px 12px rgba(93,225,230,.6);opacity:0;transition:opacity .15s, transform .15s}
+.pop.show{opacity:1;transform:translate(-50%,-64%)}
+.hidden{display:none}
+.scores{display:flex;gap:18px;font-weight:700}
+
+/* --- Responsive --- */
+@media (max-width: 860px){
+  .mint-grid{grid-template-columns:1fr}
+}"""
+
+script_js = """// Tabs
+const tabs = document.querySelectorAll('.tab');
+const panels = { mint: document.getElementById('panel-mint'), tap: document.getElementById('panel-tap') };
+tabs.forEach(btn => btn.addEventListener('click', () => {
+  tabs.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  Object.values(panels).forEach(p => p.classList.remove('active'));
+  panels[btn.dataset.tab].classList.add('active');
+}));
+
+// Wallet (optional) – This keeps it 'file-app' friendly; full wallet features need hosting/https.
+const connectBtn = document.getElementById('connect');
+const payBtn = document.getElementById('pay');
+const shortEl = document.getElementById('short');
+const statusEl = document.getElementById('status');
+
+let provider = null, signer = null, addr = null;
+function shorten(a){ return a ? a.slice(0,6)+'…'+a.slice(-4) : '—'; }
+
+connectBtn?.addEventListener('click', async () => {
+  statusEl.textContent = 'Status: connecting...';
+  if (!window.ethereum) {
+    statusEl.textContent = 'MetaMask not found. This works best when hosted (https).';
+    return;
+  }
+  try {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send('eth_requestAccounts', []);
+    signer = provider.getSigner();
+    addr = await signer.getAddress();
+    shortEl.textContent = shorten(addr);
+    statusEl.textContent = 'Status: connected';
+  } catch (e) {
+    statusEl.textContent = 'Connection cancelled.';
+  }
+});
+
+payBtn?.addEventListener('click', async () => {
+  if (!signer) {
+    statusEl.textContent = 'Connect wallet first.';
+    return;
+  }
+  try {
+    const value = ethers.utils.parseEther('0.03'); // ~ $50
+    const tx = await signer.sendTransaction({
+      to: '0xc15a5316B75ab200E0c24688f85ef9612D70bBd8',
+      value
+    });
+    statusEl.innerHTML = 'Tx sent: <a target="_blank" href="https://etherscan.io/tx/'+tx.hash+'">'+tx.hash+'</a>';
+    await tx.wait();
+    statusEl.innerHTML = '✅ Confirmed: <a target="_blank" href="https://etherscan.io/tx/'+tx.hash+'">'+tx.hash+'</a>';
+  } catch (e) {
+    statusEl.textContent = 'Error: '+ (e && e.message ? e.message : 'transaction failed');
+  }
+});
+
+// Tap game
+const img = document.getElementById('tap-glasses');
+const pop = document.getElementById('tap-pop');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const resetBtn = document.getElementById('reset');
+
+let score = Number(localStorage.getItem('vg_score') || 0);
+let best = Number(localStorage.getItem('vg_best') || 0);
+scoreEl.textContent = score;
+bestEl.textContent = best;
+
+img?.addEventListener('click', () => {
+  score++;
+  scoreEl.textContent = score;
+  if (score > best){ best = score; bestEl.textContent = best; localStorage.setItem('vg_best', best); }
+  localStorage.setItem('vg_score', score);
+  pop.classList.remove('hidden');
+  pop.classList.add('show');
+  clearTimeout(window.__popTimer);
+  window.__popTimer = setTimeout(() => pop.classList.remove('show'), 160);
+});
+
+resetBtn?.addEventListener('click', () => {
+  score = 0;
+  scoreEl.textContent = score;
+  localStorage.setItem('vg_score', score);
+});"""
+
+# Write files
+with open(os.path.join(root, "index.html"), "w", encoding="utf-8") as f:
     f.write(index_html)
-with open(os.path.join(project_dir, "VisionGlassesNFT.sol"), "w", encoding="utf-8") as f:
-    f.write(solidity)
-with open(os.path.join(project_dir, "config.json"), "w", encoding="utf-8") as f:
-    json.dump(config_json, f, indent=2)
-with open(os.path.join(project_dir, "metadata.json"), "w", encoding="utf-8") as f:
-    json.dump(metadata, f, indent=2)
-with open(os.path.join(project_dir, "README.txt"), "w", encoding="utf-8") as f:
-    f.write(readme)
+with open(os.path.join(root, "style.css"), "w", encoding="utf-8") as f:
+    f.write(style_css)
+with open(os.path.join(root, "script.js"), "w", encoding="utf-8") as f:
+    f.write(script_js)
 
-# copy uploaded image if present
-uploaded_img = "/mnt/data/44CBA0F3-7AEA-4866-9BB5-4C0765FACC81.png"
-if os.path.exists(uploaded_img):
-    shutil.copy(uploaded_img, os.path.join(project_dir, "glasses.png"))
+# Copy the user's glasses image if present
+user_img = "/mnt/data/47E35696-2370-4072-A30A-E18EA6123D89.png"
+target_img = os.path.join(root, "glasses.png")
+if os.path.exists(user_img):
+    shutil.copy(user_img, target_img)
 else:
-    # create a tiny placeholder PNG if image missing
-    with open(os.path.join(project_dir, "glasses.png"), "wb") as f:
+    # create a placeholder if missing
+    with open(target_img, "wb") as f:
         f.write(b"")
 
-# create zip
-zip_path = "/mnt/data/vision-glasses-complete.zip"
-with zipfile.ZipFile(zip_path, 'w') as z:
-    for root, _, files in os.walk(project_dir):
-        for file in files:
-            z.write(os.path.join(root, file), arcname=os.path.join(os.path.basename(project_dir), file))
+# Zip it for download
+zip_path = "/mnt/data/vision-glasses-fileapp.zip"
+with zipfile.ZipFile(zip_path, "w") as z:
+    for fname in os.listdir(root):
+        z.write(os.path.join(root, fname), arcname=fname)
 
 zip_path
